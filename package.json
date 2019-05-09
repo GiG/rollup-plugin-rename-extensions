@@ -1,6 +1,6 @@
 {
   "name": "@betit/rollup-plugin-rename-extensions",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Plugin to rename file extensions before they're emitted in rollup",
   "main": "dist/index.js",
   "scripts": {
