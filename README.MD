@@ -39,7 +39,9 @@ export default {
 ```typescript
 export interface IRenameExtensionsOptions {
     /**
-     * Files to include
+     * Files to include for potential renames.
+     * Also denotes files of which may import a renamed module in
+     * order to update their imports.
      */
     include?: Array<string | RegExp> | string | RegExp | null;
 
