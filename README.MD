@@ -26,8 +26,8 @@ export default {
         renameExtensions({
             include: ['**/*.ts', '**/*.vue'],
             mappings: {
-                '.vue': 'vue.js',
-                '.ts': 'js',
+                '.vue': '.vue.js',
+                '.ts': '.js',
             },
         })
     ],
