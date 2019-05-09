@@ -3,6 +3,14 @@
   "version": "0.0.2",
   "description": "Plugin to rename file extensions before they're emitted in rollup",
   "main": "dist/index.js",
+  "homepage": "https://github.com/GiG/rollup-plugin-rename-extensions",
+  "bugs": {
+    "url": "https://github.com/GiG/rollup-plugin-rename-extensions/issues"
+  },
+  "repository": {
+    "type" : "git",
+    "url" : "https://github.com/GiG/rollup-plugin-rename-extensions.git"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc"
