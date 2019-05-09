@@ -1,0 +1,21 @@
+{
+  "name": "@betit/rollup-plugin-rename-extensions",
+  "version": "0.0.1",
+  "description": "Plugin to rename file extensions before they're emitted in rollup",
+  "main": "dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc"
+  },
+  "author": "Thomas Caserta <thomas.caserta@gig.com>",
+  "license": "MIT",
+  "dependencies": {
+    "acorn-walk": "^6.1.1",
+    "magic-string": "^0.25.2",
+    "rollup-pluginutils": "^2.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^3.4.5",
+    "rollup": "^1.11.3"
+  }
+}
