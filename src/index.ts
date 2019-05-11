@@ -171,10 +171,7 @@ export default function renameExtensions(
 
                     file.code = magicString.toString();
                 }
-
-                file.fileName =
-                    rewrite(file.fileName, options.mappings) || file.fileName;
-
+                
                 delete bundle[key];
                 bundle[rewrite(key, options.mappings) || key] = file;
             }
