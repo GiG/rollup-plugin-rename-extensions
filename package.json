@@ -1,6 +1,6 @@
 {
   "name": "@betit/rollup-plugin-rename-extensions",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Plugin to rename file extensions before they're emitted in rollup",
   "main": "dist/index.js",
   "homepage": "https://github.com/GiG/rollup-plugin-rename-extensions",
