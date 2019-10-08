@@ -1,19 +1,15 @@
 import { Plugin } from 'rollup';
 import { createFilter } from 'rollup-pluginutils';
-// @ts-ignore No typings.
-import { simple } from 'acorn-walk';
 import MagicString from 'magic-string';
 import { extname } from 'path';
 
-interface INode {
-    start: number;
-    end: number;
-    type: NodeType;
-    [additional: string]: any;
-}
+// Parsing
+import { parse, ParserPlugin } from '@babel/parser';
+import traverse, { NodePath } from '@babel/traverse';
+import { Node, ImportDeclaration, CallExpression, ExportNamedDeclaration, ExportAllDeclaration, StringLiteral } from '@babel/types';
 
 enum NodeType {
-    Literal = 'Literal',
+    Literal = 'StringLiteral',
     CallExpresssion = 'CallExpression',
     Identifier = 'Identifier',
     ImportDeclaration = 'ImportDeclaration',
@@ -21,9 +17,17 @@ enum NodeType {
     ExportAllDeclaration = 'ExportAllDeclaration',
 }
 
+const defaultPlugins: ParserPlugin[] = [
+    'dynamicImport',
+    'classProperties',
+    'objectRestSpread',
+];
+
 export interface IRenameExtensionsOptions {
     /**
-     * Files to include
+     * Files to include for potential renames.
+     * Also denotes files of which may import a renamed module in
+     * order to update their imports.
      */
     include?: Array<string | RegExp> | string | RegExp | null;
 
@@ -38,6 +42,14 @@ export interface IRenameExtensionsOptions {
     sourceMap?: boolean;
 
     /**
+     * Babel plugins to use for parsing. Defaults to:
+     * `dynamicImport`, `classProperties`, `objectRestSpread`
+     *
+     * For a full list visit https://babeljs.io/docs/en/babel-parser#plugins
+     */
+    parserPlugins?: ParserPlugin[];
+
+    /**
      * Object describing the transformations to use.
      * IE. Input Extension => Output Extensions.
      * Extensions should include the dot for both input and output.
@@ -45,51 +57,52 @@ export interface IRenameExtensionsOptions {
     mappings: Record<string, string>;
 }
 
-export function isEmpty(array: any[] | undefined) {
+function isEmpty(array: any[] | undefined) {
     return !array || array.length === 0;
 }
 
-export function getRequireSource(node: INode): INode | false {
-    if (node.type !== NodeType.CallExpresssion) {
-        return false;
-    }
+function isLiteral(node: CallExpression['arguments'][0] | undefined | null): node is StringLiteral {
+    return !!node && node.type === NodeType.Literal;
+}
 
-    if (node.callee.type !== NodeType.Identifier || isEmpty(node.arguments)) {
+export function getRequireSource(node: CallExpression): StringLiteral | false {
+    if (isEmpty(node.arguments)) {
         return false;
     }
 
     const args = node.arguments;
+    const firstArg = args[0];
 
-    if (node.callee.name !== 'require' || args[0].type !== NodeType.Literal) {
+    if (!isLiteral(firstArg)) {
         return false;
     }
 
-    return args[0];
+    const isRequire = node.callee.type === 'Identifier' && node.callee.name === 'require';
+
+    if (node.callee.type === 'Import' || isRequire) {
+        return firstArg;
+    }
+
+    return firstArg;
 }
 
-export function getImportSource(node: INode): INode | false {
-    if (
-        node.type !== NodeType.ImportDeclaration ||
-        node.source.type !== NodeType.Literal
-    ) {
+function getImportSource(node: ImportDeclaration): StringLiteral | false {
+    if (node.type === NodeType.ImportDeclaration) {
+        return node.source;
+    }
+
+    return false;
+}
+
+function getExportSource(node: ExportAllDeclaration | ExportNamedDeclaration): StringLiteral | false {
+    if (!node.source || node.source.type !== NodeType.Literal) {
         return false;
     }
 
     return node.source;
 }
 
-export function getExportSource(node: INode): INode | false {
-    const exportNodes = [NodeType.ExportAllDeclaration, NodeType.ExportNamedDeclaration];
-
-    if (!exportNodes.includes(node.type) || !node.source ||
-        node.source.type !== NodeType.Literal) {
-        return false;
-    }
-
-    return node.source;
-}
-
-export function rewrite(
+function rewrite(
     input: string,
     extensions: Record<string, string>,
 ): string | false {
@@ -132,16 +145,32 @@ export default function renameExtensions(
 
                 if (file.code) {
                     const magicString = new MagicString(file.code);
-                    const ast = this.parse(file.code, {
+                    const ast = parse(file.code, {
                         sourceType: 'module',
+                        plugins: options.parserPlugins || defaultPlugins,
                     });
 
-                    const extract = (node: INode) => {
-                        const req =
-                            getRequireSource(node) || getImportSource(node) || getExportSource(node);
+                    const extract = (path: NodePath<Node>) => {
+                        let req: StringLiteral | false = false;
+                        if (path.isImportDeclaration()) {
+                            req = getImportSource(path.node);
+                        }
+
+                        if (path.isCallExpression()) {
+                            req = getRequireSource(path.node);
+                        }
+
+                        if (path.isExportAllDeclaration() || path.isExportNamedDeclaration()) {
+                            req = getExportSource(path.node);
+                        }
 
                         if (req) {
                             const { start, end } = req;
+
+                            if (!start || !end) {
+                                throw new Error('Error occurred when trying to get the start and end positions of imports.');
+                            }
+
                             const newPath = rewrite(
                                 req.value,
                                 options.mappings,
@@ -157,7 +186,7 @@ export default function renameExtensions(
                         }
                     };
 
-                    simple(ast, {
+                    traverse(ast, {
                         ImportDeclaration: extract,
                         CallExpression: extract,
                         ExportAllDeclaration: extract,
@@ -170,7 +199,7 @@ export default function renameExtensions(
 
                     file.code = magicString.toString();
                 }
-                
+
                 delete bundle[key];
                 bundle[rewrite(key, options.mappings) || key] = file;
             }

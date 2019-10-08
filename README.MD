@@ -22,7 +22,7 @@ export default {
     preserveModules: true,
     /* ... */
     plugins: [
-        // ...
+        // After transforms...
         renameExtensions({
             include: ['**/*.ts', '**/*.vue'],
             mappings: {
@@ -54,6 +54,14 @@ export interface IRenameExtensionsOptions {
      * Generate source maps for the transformations.
      */
     sourceMap?: boolean;
+
+    /**
+     * Babel plugins to use for parsing. Defaults to:
+     * `dynamicImport`, `classProperties`, `objectRestSpread`
+     *
+     * For a full list visit https://babeljs.io/docs/en/babel-parser#plugins
+     */
+    parserPlugins?: ParserPlugin[];
 
     /**
      * Object describing the transformations to use.
